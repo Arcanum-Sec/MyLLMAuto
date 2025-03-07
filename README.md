@@ -1,4 +1,4 @@
-# Auto Parts CTF
+# MyLLMAuto CTF
 
 This is a Capture The Flag (CTF) application designed to teach prompt injection in multi-chain LLM applications. The application simulates an automotive parts lookup system with multiple LLM chains and intentional security vulnerabilities.
 
