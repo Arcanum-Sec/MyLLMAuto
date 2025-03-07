@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  auto-parts-ctf:
+    build: .
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/app
+    restart: unless-stopped

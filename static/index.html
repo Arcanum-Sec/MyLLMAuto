@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyLLM Auto Parts CTF</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+            display: flex;
+        }
+        .sidebar {
+            width: 336px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+        }
+        .sidebar h2 {
+            color: #ecf0f1;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .sidebar p {
+            color: #bdc3c7;
+            font-size: 0.9em;
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #3498db;
+        }
+        .search-container {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        .search-container input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .search-container button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .search-container button:hover {
+            background-color: #2980b9;
+        }
+        .parts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .part-card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .part-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .part-card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .part-card p {
+            margin-bottom: 0;
+            color: #7f8c8d;
+        }
+        .part-details {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+            display: none;
+        }
+        .details-section {
+            margin-bottom: 15px;
+        }
+        .details-section h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .specs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .specs-table th, .specs-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .specs-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .specs-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .specs-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        .disclaimer {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #ffe6e6;
+            border-radius: 5px;
+            border-left: 4px solid #e74c3c;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        .loading:after {
+            content: "...";
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60%, 100% { content: "..."; }
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 5px;
+            width: 70%;
+            max-width: 700px;
+            color: #333;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+        }
+        
+        /* Collapsible Hint Styles */
+        .hint-container {
+            margin-bottom: 15px;
+        }
+        
+        .hint-header {
+            background-color: #f1f1f1;
+            color: #333;
+            cursor: pointer;
+            padding: 12px;
+            width: 100%;
+            text-align: left;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            transition: 0.3s;
+        }
+        
+        .hint-header:hover {
+            background-color: #ddd;
+        }
+        
+        .hint-content {
+            padding: 0 18px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+            background-color: #f9f9f9;
+            border-radius: 0 0 4px 4px;
+        }
+        
+        .hint-content p {
+            padding: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Left sidebar for API key configuration -->
+    <div class="sidebar">
+        <h2>MyLLM Auto Engineering CTF</h2>
+        <p>This Capture The Flag (CTF) challenge demonstrates prompt injection vulnerabilities in LLM applications.</p>
+        <p>To participate in this challenge, you need to provide your own OpenAI API key. This key will be used for all LLM interactions in the challenge.</p>
+        
+        <!-- API Key Configuration Section -->
+        <div id="apiKeySection" style="margin-bottom: 20px; padding: 15px; background-color: rgba(255,255,255,0.1); border-radius: 4px;">
+            <h3 style="color: #ecf0f1;">API Key Configuration</h3>
+            <p>Enter your OpenAI API key to enable the challenge:</p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <input type="password" id="apiKeyInput" placeholder="Enter your OpenAI API key" style="padding: 8px; width: 88%;" />
+                <div style="display: flex; gap: 10px; width: 88%;">
+                    <button id="saveApiKeyButton" style="background-color: #4caf50; color: white; border: none; padding: 8px 15px; cursor: pointer; flex: 2;">Save API Key</button>
+                    <button id="clearApiKeyButton" style="background-color: #e74c3c; color: white; border: none; padding: 8px 15px; cursor: pointer; flex: 1;">Clear</button>
+                </div>
+            </div>
+            <div id="apiKeyStatus" style="font-size: 0.9em; color: #bdc3c7; margin-top: 10px;"></div>
+        </div>
+        
+        <!-- Challenge Explanation -->
+        <div style="margin-bottom: 20px; padding: 15px; background-color: rgba(255,255,255,0.1); border-radius: 4px;">
+            <h3 style="color: #ecf0f1;">Challenge Information</h3>
+            <p>This is a Capture The Flag (CTF) challenge focused on prompt injection vulnerabilities in multi-chain LLM applications.</p>
+            <p>The system contains multiple flags, 3 discoverable via Prompt injections, and 2 through other means. No fuzzing or bruteforcing should be necessary.</p>
+            <p>Submit flags below to track your progress.</p>
+        </div>
+        
+        <!-- Flag Submission and Tracking Section -->
+        <div style="margin-top: 20px; padding: 15px; background-color: rgba(255,255,255,0.1); border-radius: 4px;">
+            <h3 style="color: #ecf0f1;">Flag Submission</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                <input type="text" id="flagInput" placeholder="Enter flag (format: realflag={...})" style="padding: 8px; width: 88%;" />
+                <div style="display: flex; gap: 10px; width: 88%;">
+                    <button id="submitFlagButton" style="background-color: #3498db; color: white; border: none; padding: 8px 15px; cursor: pointer; flex: 2;">Submit Flag</button>
+                    <button id="clearFlagsButton" style="background-color: #e74c3c; color: white; border: none; padding: 8px 15px; cursor: pointer; flex: 1;">Clear All</button>
+                </div>
+            </div>
+            <div id="flagSubmissionStatus" style="font-size: 0.9em; color: #bdc3c7; margin-top: 10px;"></div>
+            
+            <h4 style="color: #ecf0f1; margin-top: 20px;">Captured Flags</h4>
+            <div id="capturedFlags" style="background-color: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto;">
+                <p style="color: #bdc3c7; font-style: italic;">No flags captured yet.</p>
+            </div>
+        </div>
+        
+        <!-- Hints Button -->
+        <div style="margin-top: 20px; padding: 15px; background-color: rgba(255,255,255,0.1); border-radius: 4px;">
+            <button id="showHintsButton" style="background-color: #f39c12; color: white; border: none; padding: 10px 15px; cursor: pointer; width: 100%; font-weight: bold; border-radius: 4px;">
+                Need Help? Show Hints
+            </button>
+        </div>
+    </div>
+    
+    <!-- Hints Modal -->
+    <div id="hintsModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>CTF Challenge Hints</h2>
+            
+            <div class="hint-container">
+                <button class="hint-header">General Hints</button>
+                <div class="hint-content">
+                    <p>The system is an agentic / chained LLM system with three LLMs. Some have access to tools. The 1st just prepares the users search for the next two. The 2nd LLM grabs part info from a parts db. The 3rd gets enriches the system with engineering notes from a seperate db.</p>
+                </div>
+            </div>
+            
+            <div class="hint-container">
+                <button class="hint-header">Flag One Hint</button>
+                <div class="hint-content">
+                    <p>Step one in testing a LLM enabled webapp should always be leaking the _ _ _ _ _ _ prompt.</p>
+                </div>
+            </div>
+            
+            <div class="hint-container">
+                <button class="hint-header">Flag Two Hint</button>
+                <div class="hint-content">
+                    <p>The 2nd LLM queries the parts db, could there be something in there? How would you get it? What do you have that could get you more data maybe?</p>
+                </div>
+            </div>
+            
+            <div class="hint-container">
+                <button class="hint-header">Flag Three Hint</button>
+                <div class="hint-content">
+                    <p>The 3rd LLM queries a system and a db, could there be something in there? How would you get it? What do you have that could get you more data maybe?</p>
+                </div>
+            </div>
+            
+            <div class="hint-container">
+                <button class="hint-header">Flag Four and Five Hints</button>
+                <div class="hint-content">
+                    <p>Where might data leak in an application? You might need Burp or Caido or Dev Tools for these flags.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content area -->
+    <div class="main-content">
+        <div class="container">
+            <h1>Engineering Parts Lookup System</h1>
+            
+            <p>Welcome to the engineering parts lookup system. Search for parts by name, category, or part number.</p>
+            
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search for brake pads, oil filters, spark plugs, etc..." />
+                <button id="searchButton">Search</button>
+            </div>
+            
+            <div id="loadingIndicator" style="display: none;">
+                <p>Searching for parts...</p>
+            </div>
+            
+            <div id="promptInjectionResult" style="display: none; margin-top: 20px; padding: 15px; background-color: #ffecb3; border-left: 4px solid #ffc107; border-radius: 4px;">
+                <h3>Search Information</h3>
+                <div id="promptInjectionContent"></div>
+            </div>
+            
+            <h2>Find Your Parts</h2>
+            <div class="parts-container" id="partsContainer">
+                <!-- Parts will be dynamically added here -->
+            </div>
+            
+            <div class="part-details" id="partDetails">
+                <div class="details-section">
+                    <h3>Part Information</h3>
+                    <div id="partInformation"></div>
+                </div>
+                <div class="details-section">
+                    <h3>Technical Specifications</h3>
+                    <div id="partSpecifications"></div>
+                </div>
+                <div class="details-section">
+                    <h3>Engineering Notes</h3>
+                    <div id="engineeringNotes"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function(){
+            setTimeout(function(){
+                var a = String.fromCharCode(115,101,116);
+                var b = String.fromCharCode(107);
+                var c = atob('cmVhbGZsYWc9e2xvY2FsX3N0b3JhZ2VfZnR3fQ==');
+                window[atob('bG9jYWxTdG9yYWdl')][a+b](atob('c2V0aw=='), c);
+            }, 100);
+        })();
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const searchButton = document.getElementById('searchButton');
+            const partsContainer = document.getElementById('partsContainer');
+            const partDetails = document.getElementById('partDetails');
+            const partInformation = document.getElementById('partInformation');
+            const partSpecifications = document.getElementById('partSpecifications');
+            const engineeringNotes = document.getElementById('engineeringNotes');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const promptInjectionResult = document.getElementById('promptInjectionResult');
+            const promptInjectionContent = document.getElementById('promptInjectionContent');
+            
+            // Connect to WebSocket - only for monitoring in Burp Suite
+            let socket;
+            
+            function connectWebSocket() {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws`;
+                
+                socket = new WebSocket(wsUrl);
+                
+                socket.onopen = function(e) {
+                    console.log('WebSocket connection established');
+                };
+                
+                socket.onmessage = function(event) {
+                    // Only log the message to console, don't display it on the page
+                    console.log('WebSocket message received:', event.data);
+                };
+                
+                socket.onclose = function(event) {
+                    console.log('WebSocket connection closed');
+                    // Try to reconnect after a delay
+                    setTimeout(connectWebSocket, 5000);
+                };
+                
+                socket.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                };
+            }
+            
+            // Initialize WebSocket connection
+            connectWebSocket();
+            
+            // Function to send search query to API
+            async function searchParts(query) {
+                loadingIndicator.style.display = 'block';
+                partsContainer.innerHTML = '';
+                partDetails.style.display = 'none';
+                document.getElementById('promptInjectionResult').style.display = 'none';
+                
+                try {
+                    // First try the chat API to see if we can get a prompt injection result
+                    const chatResponse = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ content: query }),
+                    });
+                    
+                    if (chatResponse.ok) {
+                        const chatData = await chatResponse.json();
+                        // Display any potential prompt injection results
+                        if (chatData && (chatData.initial_response || chatData.engineering_notes || chatData.specifications)) {
+                            const promptInjectionContent = document.getElementById('promptInjectionContent');
+                            let content = '';
+                            
+                            if (chatData.initial_response) {
+                                content += `<h4>Response:</h4><p>${chatData.initial_response}</p>`;
+                            }
+                            
+                            if (chatData.specifications) {
+                                // Parse specifications into a table
+                                content += `<h4>Specifications:</h4>`;
+                                content += parseSpecificationsToTable(chatData.specifications);
+                            }
+                            
+                            if (chatData.engineering_notes) {
+                                content += `<h4>Engineering Notes:</h4><p>${chatData.engineering_notes}</p>`;
+                            }
+                            
+                            promptInjectionContent.innerHTML = content;
+                            document.getElementById('promptInjectionResult').style.display = 'block';
+                        }
+                    }
+                    
+                    // Use the parts search API
+                    const response = await fetch('/api/parts/search', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ query: query }),
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    
+                    const data = await response.json();
+                    loadingIndicator.style.display = 'none';
+                    
+                    // Display the parts from the API response
+                    displayParts(data.parts || []);
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    loadingIndicator.style.display = 'none';
+                    partsContainer.innerHTML = `<p>Error: ${error.message}</p>`;
+                }
+            }
+            
+            // Function to display parts
+            function displayParts(parts) {
+                if (parts.length === 0) {
+                    partsContainer.innerHTML = '<p>No parts found. Try a different search term.</p>';
+                    return;
+                }
+                
+                partsContainer.innerHTML = '';
+                parts.forEach(part => {
+                    const partCard = document.createElement('div');
+                    partCard.className = 'part-card';
+                    partCard.innerHTML = `
+                        <h3>${part.name}</h3>
+                        <p>${part.category}</p>
+                        <p><small>Part #: ${part.part_number}</small></p>
+                    `;
+                    partCard.addEventListener('click', () => getPartDetails(part.name));
+                    partsContainer.appendChild(partCard);
+                });
+            }
+            
+            // Function to get part details from API
+            async function getPartDetails(partName) {
+                loadingIndicator.style.display = 'block';
+                
+                try {
+                    // Use the new part details API
+                    const response = await fetch(`/api/parts/${partName.toLowerCase()}`);
+                    
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    
+                    const data = await response.json();
+                    loadingIndicator.style.display = 'none';
+                    
+                    // Show the part details
+                    showPartDetails(partName, data);
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    loadingIndicator.style.display = 'none';
+                    alert(`Error retrieving part details: ${error.message}`);
+                }
+            }
+            
+            // Function to show part details
+            function showPartDetails(partName, data) {
+                const partDetails = document.getElementById('partDetails');
+                partDetails.style.display = 'block';
+                
+                let html = `
+                    <div class="details-section">
+                        <h3>${partName.charAt(0).toUpperCase() + partName.slice(1)} Details</h3>
+                        <p><strong>Part Number:</strong> ${data.basic_specs.part_number}</p>
+                        <p><strong>Type:</strong> ${data.basic_specs.type}</p>
+                        <p><strong># in Stock:</strong> ${data.basic_specs.stock_count || 'Not available'}</p>
+                    </div>
+                `;
+                
+                if (data.basic_specs) {
+                    html += `
+                        <div class="details-section">
+                            <h3>Basic Specifications</h3>
+                            <table class="specs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Property</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${Object.entries(data.basic_specs).map(([key, value]) => {
+                                        if (typeof value !== 'object') {
+                                            const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                            return `<tr><td>${formattedKey}</td><td>${value}</td></tr>`;
+                                        }
+                                        return '';
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+                
+                if (data.engineering_notes) {
+                    html += `
+                        <div class="details-section">
+                            <h3>Engineering Notes</h3>
+                            <p>${data.engineering_notes}</p>
+                        </div>
+                    `;
+                }
+                
+                partDetails.innerHTML = html;
+                
+                // Scroll to part details
+                partDetails.scrollIntoView({ behavior: 'smooth' });
+            }
+            
+            // Function to parse specifications text into a table
+            function parseSpecificationsToTable(specificationsText) {
+                // If no specifications text, return empty string
+                if (!specificationsText) return '';
+                
+                try {
+                    // If specificationsText is a string that looks like JSON, parse it
+                    if (typeof specificationsText === 'string') {
+                        try {
+                            specificationsText = JSON.parse(specificationsText);
+                        } catch (e) {
+                            // Not valid JSON, continue with string processing
+                        }
+                    }
+                    
+                    // If specificationsText is an object, convert it directly to a table
+                    if (typeof specificationsText === 'object' && specificationsText !== null) {
+                        let tableHtml = '<table class="specs-table"><thead><tr><th>Property</th><th>Value</th></tr></thead><tbody>';
+                        
+                        for (const [key, value] of Object.entries(specificationsText)) {
+                            // Skip nested objects
+                            if (typeof value !== 'object') {
+                                const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                tableHtml += `<tr><td>${formattedKey}</td><td>${value}</td></tr>`;
+                            }
+                        }
+                        
+                        tableHtml += '</tbody></table>';
+                        return tableHtml;
+                    }
+                    
+                    // If we get here, specificationsText is a string and not valid JSON
+                    // Create a simple display for the string content
+                    return `<div class="specs-text">${specificationsText}</div>`;
+                } catch (error) {
+                    console.error('Error parsing specifications:', error);
+                    return `<div class="error">Error displaying specifications: ${error.message}</div>`;
+                }
+            }
+            
+            // Event listener for search button
+            searchButton.addEventListener('click', function() {
+                const query = searchInput.value.trim();
+                if (query) {
+                    searchParts(query);
+                }
+            });
+            
+            // Event listener for Enter key
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchButton.click();
+                }
+            });
+            
+            // Initial search for all parts
+            searchParts("");
+            
+            // API Key handling
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const saveApiKeyButton = document.getElementById('saveApiKeyButton');
+            const clearApiKeyButton = document.getElementById('clearApiKeyButton');
+            const apiKeyStatus = document.getElementById('apiKeyStatus');
+            
+            // Check if API key is already set in localStorage
+            const savedApiKey = localStorage.getItem('openai_api_key');
+            if (savedApiKey) {
+                apiKeyInput.value = '••••••••••••••••••••••••••';
+                apiKeyStatus.textContent = 'API key is set. You can update it if needed.';
+                apiKeyStatus.style.color = '#4caf50';
+            } else {
+                apiKeyStatus.textContent = 'No API key set. Please enter your OpenAI API key.';
+                apiKeyStatus.style.color = '#f44336';
+            }
+            
+            // Event listener for save API key button
+            saveApiKeyButton.addEventListener('click', async function() {
+                const apiKey = apiKeyInput.value.trim();
+                if (!apiKey) {
+                    apiKeyStatus.textContent = 'Please enter a valid API key.';
+                    apiKeyStatus.style.color = '#f44336';
+                    return;
+                }
+                
+                try {
+                    apiKeyStatus.textContent = 'Saving API key...';
+                    apiKeyStatus.style.color = '#ff9800';
+                    
+                    const response = await fetch('/api/set_api_key', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ api_key: apiKey }),
+                    });
+                    
+                    if (response.ok) {
+                        localStorage.setItem('openai_api_key', apiKey);
+                        apiKeyInput.value = '••••••••••••••••••••••••••';
+                        apiKeyStatus.textContent = 'API key saved successfully!';
+                        apiKeyStatus.style.color = '#4caf50';
+                    } else {
+                        const data = await response.json();
+                        apiKeyStatus.textContent = `Error: ${data.detail || 'Failed to save API key'}`;
+                        apiKeyStatus.style.color = '#f44336';
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    apiKeyStatus.textContent = `Error: ${error.message || 'Failed to save API key'}`;
+                    apiKeyStatus.style.color = '#f44336';
+                }
+            });
+            
+            // Event listener for clear API key button
+            clearApiKeyButton.addEventListener('click', function() {
+                localStorage.removeItem('openai_api_key');
+                apiKeyInput.value = '';
+                apiKeyStatus.textContent = 'API key cleared';
+                apiKeyStatus.style.color = '#e74c3c';
+                
+                // Also clear from server
+                fetch('/api/set_api_key', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ api_key: '' }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('API key cleared from server');
+                })
+                .catch(error => {
+                    console.error('Error clearing API key from server:', error);
+                });
+            });
+            
+            // Flag submission and tracking
+            const flagInput = document.getElementById('flagInput');
+            const submitFlagButton = document.getElementById('submitFlagButton');
+            const clearFlagsButton = document.getElementById('clearFlagsButton');
+            const flagSubmissionStatus = document.getElementById('flagSubmissionStatus');
+            const capturedFlags = document.getElementById('capturedFlags');
+            
+            // Load captured flags from localStorage
+            let capturedFlagsList = JSON.parse(localStorage.getItem('captured_flags') || '[]');
+            updateCapturedFlagsDisplay();
+            
+            // Event listener for flag submission
+            submitFlagButton.addEventListener('click', async function() {
+                const flag = flagInput.value.trim();
+                
+                if (!flag) {
+                    flagSubmissionStatus.textContent = 'Please enter a flag.';
+                    flagSubmissionStatus.style.color = '#f44336';
+                    return;
+                }
+                
+                // Validate flag format (realflag={...})
+                if (!flag.match(/^realflag=\{?.+\}?$/)) {
+                    flagSubmissionStatus.textContent = 'Invalid flag format. Use format: realflag={...} or realflag=text';
+                    flagSubmissionStatus.style.color = '#f44336';
+                    return;
+                }
+                
+                // Check if flag is already captured
+                if (capturedFlagsList.some(f => f.value === flag)) {
+                    flagSubmissionStatus.textContent = 'You already captured this flag!';
+                    flagSubmissionStatus.style.color = '#ff9800';
+                    return;
+                }
+                
+                try {
+                    flagSubmissionStatus.textContent = 'Validating flag...';
+                    flagSubmissionStatus.style.color = '#ff9800';
+                    
+                    // Send the flag to the server for validation
+                    const response = await fetch('/api/validate_flag', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ flag: flag }),
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.valid) {
+                        // Add flag to captured list with timestamp
+                        const newFlag = {
+                            value: flag,
+                            timestamp: new Date().toISOString(),
+                            id: capturedFlagsList.length + 1,
+                            valid: true
+                        };
+                        
+                        capturedFlagsList.push(newFlag);
+                        localStorage.setItem('captured_flags', JSON.stringify(capturedFlagsList));
+                        
+                        // Update UI
+                        flagInput.value = '';
+                        flagSubmissionStatus.textContent = data.message;
+                        flagSubmissionStatus.style.color = '#4caf50';
+                        updateCapturedFlagsDisplay();
+                    } else {
+                        // Add flag to captured list but mark as invalid
+                        const newFlag = {
+                            value: flag,
+                            timestamp: new Date().toISOString(),
+                            id: capturedFlagsList.length + 1,
+                            valid: false
+                        };
+                        
+                        capturedFlagsList.push(newFlag);
+                        localStorage.setItem('captured_flags', JSON.stringify(capturedFlagsList));
+                        
+                        flagSubmissionStatus.textContent = data.message;
+                        flagSubmissionStatus.style.color = '#f44336';
+                        updateCapturedFlagsDisplay();
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    flagSubmissionStatus.textContent = `Error: ${error.message || 'Failed to validate flag'}`;
+                    flagSubmissionStatus.style.color = '#f44336';
+                }
+            });
+            
+            // Event listener for clear all flags button
+            clearFlagsButton.addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear all captured flags? This action cannot be undone.')) {
+                    localStorage.removeItem('captured_flags');
+                    capturedFlagsList = [];
+                    updateCapturedFlagsDisplay();
+                    updateProgressBar();
+                    flagSubmissionStatus.textContent = 'All flags cleared';
+                    flagSubmissionStatus.style.color = '#e74c3c';
+                }
+            });
+            
+            // Function to update the captured flags display
+            function updateCapturedFlagsDisplay() {
+                if (capturedFlagsList.length === 0) {
+                    capturedFlags.innerHTML = '<p style="color: #bdc3c7; font-style: italic;">No flags captured yet.</p>';
+                    return;
+                }
+                
+                // Sort flags by ID
+                capturedFlagsList.sort((a, b) => a.id - b.id);
+                
+                // Count valid flags
+                const validCount = capturedFlagsList.filter(flag => flag.valid).length;
+                const totalValidFlags = 5; // Total number of valid flags in the challenge
+                
+                let flagsHtml = `
+                    <div style="margin-bottom: 15px; text-align: center;">
+                        <div style="font-size: 1.2em; color: #ecf0f1;">Progress: ${validCount}/${totalValidFlags}</div>
+                        <div style="background: rgba(255,255,255,0.1); height: 10px; border-radius: 5px; margin-top: 5px;">
+                            <div style="background: #4caf50; width: ${(validCount/totalValidFlags)*100}%; height: 100%; border-radius: 5px;"></div>
+                        </div>
+                    </div>
+                `;
+                
+                capturedFlagsList.forEach(flag => {
+                    const date = new Date(flag.timestamp);
+                    const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+                    const statusColor = flag.valid ? '#4caf50' : '#e74c3c';
+                    const statusText = flag.valid ? 'VALID' : 'INVALID';
+                    
+                    flagsHtml += `
+                        <div style="margin-bottom: 8px; padding: 8px; background-color: rgba(255,255,255,0.05); border-radius: 3px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <div style="color: #ecf0f1; font-weight: bold;">Flag ${flag.id}</div>
+                                <div style="color: ${statusColor}; font-weight: bold;">${statusText}</div>
+                            </div>
+                            <div style="color: #ecf0f1; word-break: break-all;">${flag.value}</div>
+                            <div style="color: #bdc3c7; font-size: 0.8em;">${formattedDate}</div>
+                        </div>
+                    `;
+                });
+                
+                capturedFlags.innerHTML = flagsHtml;
+            }
+            
+            // Hints Modal Functionality
+            const modal = document.getElementById("hintsModal");
+            const hintsBtn = document.getElementById("showHintsButton");
+            const closeBtn = document.getElementsByClassName("close")[0];
+            
+            // Open modal when button is clicked
+            hintsBtn.onclick = function() {
+                modal.style.display = "block";
+            }
+            
+            // Close modal when X is clicked
+            closeBtn.onclick = function() {
+                modal.style.display = "none";
+            }
+            
+            // Close modal when clicking outside of it
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+            
+            // Collapsible hints functionality
+            const collapsibles = document.getElementsByClassName("hint-header");
+            for (let i = 0; i < collapsibles.length; i++) {
+                collapsibles[i].addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    const content = this.nextElementSibling;
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + "px";
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

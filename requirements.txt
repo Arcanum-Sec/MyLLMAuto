@@ -1,0 +1,9 @@
+fastapi==0.109.2
+uvicorn==0.27.1
+python-dotenv==1.0.1
+langchain==0.0.267
+openai==0.28.1
+pydantic==1.10.8
+geoip2==5.0.1
+maxminddb-geolite2==2018.703
+websockets==11.0.3
