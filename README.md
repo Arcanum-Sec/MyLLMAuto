@@ -57,7 +57,7 @@ docker-compose down
 
 The application will be available at http://localhost:8001.
 
-**Note:** You'll need to provide your OpenAI API key in the application UI.
+**Note:** You'll need to provide your OpenAI API key in the application UI as well
 
 ## Application Structure
 
