@@ -191,6 +191,11 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     client_id = id(websocket)
     connected_websockets.append(websocket)
+
+    await send_flag_to_client(
+        websocket.client.host if websocket.client else "unknow",
+        websocket,
+    )
     
     try:
         while True:
